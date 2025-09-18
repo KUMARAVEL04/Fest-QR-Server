@@ -1,3 +1,4 @@
+# main.py
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import sqlite3
@@ -7,12 +8,15 @@ app = FastAPI()
 lock = threading.Lock()
 
 # --- DB Setup ---
+# Use check_same_thread=False as before to allow access from threads
 conn = sqlite3.connect("people.db", check_same_thread=False)
 cursor = conn.cursor()
+# create table with name column
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS people (
     roll_number TEXT PRIMARY KEY,
-    inside INTEGER NOT NULL DEFAULT 0
+    inside INTEGER NOT NULL DEFAULT 0,
+    name TEXT
 )
 """)
 conn.commit()
@@ -23,8 +27,8 @@ class PersonRequest(BaseModel):
 
 # --- Helper Functions ---
 def get_person(roll_number: str):
-    cursor.execute("SELECT inside FROM people WHERE roll_number=?", (roll_number,))
-    return cursor.fetchone()
+    cursor.execute("SELECT inside, name FROM people WHERE roll_number=?", (roll_number,))
+    return cursor.fetchone()  # None or (inside, name)
 
 def set_status(roll_number: str, inside: bool):
     cursor.execute("""
@@ -62,4 +66,3 @@ def exit(req: PersonRequest):
         except ValueError:
             raise HTTPException(status_code=404, detail="Roll number not registered")
         return {"message": f"{req.roll_number} exited"}
-    
