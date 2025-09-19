@@ -180,13 +180,36 @@ def main():
             if new:
                 replace_roll(cursor, conn, old, new, new_name, remove_dummy)
         elif choice == "6":
-            items = load_dummy_list()
-            print("\nDummy rolls (from dummy_rolls.txt):")
-            if not items:
-                print(" (none)")
-            else:
-                for it in items:
-                    print(" -", it)
+            if not os.path.exists(LOG_FILE):
+                print("\nNo log file found.")
+                return
+            print("\n--- Change Log ---")
+            with open(LOG_FILE, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+
+                    try:
+                        ts_str, action = line.split(" ", 1)
+                        ts = datetime.fromisoformat(ts_str)
+                        pretty_ts = ts.strftime("%d-%b-%Y %I:%M %p")
+                    except Exception:
+                        # fallback if parsing fails
+                        pretty_ts, action = "UNKNOWN_TIME", line
+
+                    # Try to interpret some common actions
+                    if action.startswith("ADD"):
+                        # e.g. ADD roll='123' name='Alice'
+                        msg = action.replace("ADD ", "Added ")
+                    elif action.startswith("REPLACE"):
+                        msg = action.replace("REPLACE ", "Replaced ")
+                    elif action.startswith("RESET_ALL"):
+                        msg = "Reset everyone outside " + action.split(" ", 1)[1]
+                    else:
+                        msg = action
+
+                    print(f"[{pretty_ts}] {msg}")
         elif choice == "7":
             confirm = input("Are you sure you want to set everyone to Outside? (y/N): ").strip().lower()
             if confirm == "y":
